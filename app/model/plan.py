@@ -13,7 +13,7 @@ class Attraction(BaseModel):
     attraction_id: str
     attraction_name: str
     location: Location
-    date: date
+    date: str
     hour: Optional[timedelta] = None
 
 
@@ -26,4 +26,4 @@ class PlanMetadata(BaseModel):
 
 
 class Plan(PlanMetadata):
-    plan: Dict[date, List[Attraction]]
+    plan: Dict[str, List[Attraction]]

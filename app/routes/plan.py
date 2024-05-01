@@ -26,7 +26,7 @@ async def get_plans(user_id: int):
 async def post_plan(plan_metadata: PlanMetadata):
     try:
         new_plan = await srv.create_plan(plan_metadata)
-        # crud.insert_plan(new_plan)
+        crud.insert_plan(new_plan)
         return new_plan
     except:
         pass
