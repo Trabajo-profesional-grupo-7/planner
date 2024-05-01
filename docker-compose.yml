@@ -1,0 +1,15 @@
+services:
+  planner:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    hostname: planner
+    container_name: planner
+    restart: always
+    ports:
+      - ${PORT}:8004
+    environment:
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - USER_SERVICE=${USER_SERVICE}
+      - ATTRACTIONS_SERVICE=${ATTRACTIONS_SERVICE}
