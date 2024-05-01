@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -11,9 +11,10 @@ class Location(BaseModel):
 
 class Attraction(BaseModel):
     attraction_id: str
+    attraction_name: str
     location: Location
     date: date
-    hour: timedelta
+    hour: Optional[timedelta] = None
 
 
 class PlanMetadata(BaseModel):
