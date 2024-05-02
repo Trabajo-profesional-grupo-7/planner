@@ -2,25 +2,32 @@ from app.model.plan import Plan
 
 
 def parse_plan(plan: Plan) -> dict:
-    dict = {}
-    dict["user_id"] = plan.user_id
-    dict["plan_name"] = plan.plan_name
-    dict["init_date"] = str(plan.init_date)
-    dict["end_date"] = str(plan.end_date)
-    plan_dict = {}
+    dict_plan = {}
+    for day in plan.plan:
+        attractions = plan.plan.get(day)
 
-    for day in plan.plan.keys():
-        attr = []
-        for a in plan.plan[day]:
-            attr.append(
+        daily_attractions = []
+        for attraction in attractions:
+            daily_attractions.append(
                 {
-                    "attraction_id": a.attraction_id,
-                    "date": str(a.date),
-                    "hour": str(a.hour),
+                    "attraction_id": attraction.attraction_id,
+                    "attraction_name": attraction.attraction_name,
+                    "location": {
+                        "latitude": attraction.location["latitude"],
+                        "longitude": attraction.location["longitude"],
+                    },
+                    "date": attraction.date,
+                    "hour": None,
                 }
             )
-        plan_dict[str(day)] = attr
 
-    dict["plan"] = plan_dict
+        dict_plan[day] = daily_attractions
 
-    return dict
+    return {
+        "user_id": plan.user_id,
+        "plan_name": plan.plan_name,
+        "destination": plan.destination,
+        "init_date": str(plan.init_date),
+        "end_date": str(plan.end_date),
+        "plan": dict_plan,
+    }

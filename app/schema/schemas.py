@@ -2,7 +2,6 @@ from app.model.plan import Plan
 
 
 def individual_serial(plan) -> Plan:
-
     return {
         "id": str(plan["_id"]),
         "plan_name": plan["plan_name"],
