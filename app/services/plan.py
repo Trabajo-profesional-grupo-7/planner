@@ -1,5 +1,4 @@
 import os
-import urllib.parse
 from datetime import timedelta
 
 import requests
@@ -22,8 +21,10 @@ async def create_plan(plan_metadata: PlanMetadata) -> Plan:
 
     user_plan = {}
     date = plan_metadata.init_date
+    assigned_attractions = []
     for attraction in top_attractions:
         daily_attractions_list = []
+        assigned_attractions.append(attraction["attraction_id"])
         daily_attractions_list.append(
             Attraction.model_construct(
                 attraction_id=attraction["attraction_id"],
@@ -39,9 +40,11 @@ async def create_plan(plan_metadata: PlanMetadata) -> Plan:
             longitude=str(attraction["location"]["longitude"]),
             radius=5000,
             attractions_amount=2,
+            restricted_attractions=assigned_attractions,
         )
 
         for daily_attraction in top_nearby_attractions:
+            assigned_attractions.append(daily_attraction["attraction_id"])
             daily_attractions_list.append(
                 Attraction.model_construct(
                     attraction_id=daily_attraction["attraction_id"],
@@ -88,34 +91,29 @@ def get_user_top_attractions(user_preferences, destination, days):
     return top_attractions
 
 
-def get_all_places(text: str) -> Places:
-    places = requests.post(
-        f"{ATTRACTIONS_SERVICE}/attractions/autocomplete", json={"query": text}
-    )
-
-    places_list = []
-    for place in places.json():
-        places_list.append(
-            Place.model_construct(
-                attraction_id=place["attraction_id"],
-                attraction_name=place["attraction_name"],
-            )
-        )
-
-    return Places.model_construct(places=places_list, total=len(places_list))
-
-
 def get_nearby_attractions(
-    user_preferences, latitude, longitude, radius, attractions_amount
+    user_preferences,
+    latitude,
+    longitude,
+    radius,
+    attractions_amount,
+    restricted_attractions,
 ):
     nearby_attractions = requests.post(
         url=f"{ATTRACTIONS_SERVICE}/attractions/nearby/{latitude}/{longitude}/{radius}",
         json={"attraction_types": user_preferences},
     )
-    nearby_attractions = nearby_attractions.json()
+    nearby_attractions = list(nearby_attractions.json())
 
-    top_nearby_attractions = nearby_attractions
-    if len(nearby_attractions) >= attractions_amount:
-        top_nearby_attractions = nearby_attractions[:attractions_amount]
+    top_nearby_attractions = 0
+    for attraction in nearby_attractions:
+        if top_nearby_attractions == attractions_amount:
+            nearby_attractions = nearby_attractions[:attractions_amount]
+            break
 
-    return top_nearby_attractions
+        if attraction["attraction_id"] in restricted_attractions:
+            nearby_attractions.remove(attraction)
+        else:
+            top_nearby_attractions += 1
+
+    return nearby_attractions
