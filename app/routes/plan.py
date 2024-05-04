@@ -22,24 +22,19 @@ async def get_plans(user_id: int):
         pass
 
 
+@router.get("/plan/{id}", tags=["Plans"], description="Get plan by id")
+async def get_plans(plan_id: str):
+    try:
+        return list_serial(collection_name.find({"_id": ObjectId(plan_id)}))
+    except:
+        pass
+
+
 @router.post("/plan", tags=["Plans"], description="New plan", response_model=Plan)
 async def post_plan(plan_metadata: PlanMetadata):
     try:
         new_plan = await srv.create_plan(plan_metadata)
         crud.insert_plan(new_plan)
         return new_plan
-    except:
-        pass
-
-
-@router.get(
-    "/plan/places",
-    tags=["Places"],
-    description="Get all cities that match with the text",
-    response_model=Places,
-)
-async def get_cities(search_text: str):
-    try:
-        return srv.get_all_places(search_text)
     except:
         pass
