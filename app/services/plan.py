@@ -2,9 +2,11 @@ import os
 from datetime import timedelta
 
 import requests
+from bson import ObjectId
+from config.database import collection_name
 
-from app.model.plan import Attraction, Plan, PlanMetadata
-from app.schema.place import Place, Places
+from app.model.plan import Attraction, Plan, PlanMetadata, RemoveAttraction
+from app.schema import schemas
 
 USER_SERVICE = os.getenv("USER_SERVICE")
 ATTRACTIONS_SERVICE = os.getenv("ATTRACTIONS_SERVICE")
@@ -63,7 +65,23 @@ async def create_plan(plan_metadata: PlanMetadata) -> Plan:
         destination=plan_metadata.destination,
         init_date=plan_metadata.init_date,
         end_date=plan_metadata.end_date,
+        attractions=assigned_attractions,
         plan=user_plan,
+    )
+
+
+def delete_attraction(attr_to_remove: RemoveAttraction):
+    plan = collection_name.find_one({"_id": ObjectId(attr_to_remove.plan_id)})
+
+    day = plan["plan"][attr_to_remove.date]
+
+    for attraction in day:
+        if attraction["attraction_id"] == attr_to_remove.attraction_id:
+            plan["attractions"].remove(attr_to_remove.attraction_id)
+            day.remove(attraction)
+
+    collection_name.update_one(
+        {"_id": ObjectId(attr_to_remove.plan_id)}, {"$set": plan}
     )
 
 

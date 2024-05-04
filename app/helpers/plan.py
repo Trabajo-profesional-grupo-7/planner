@@ -29,5 +29,6 @@ def parse_plan(plan: Plan) -> dict:
         "destination": plan.destination,
         "init_date": str(plan.init_date),
         "end_date": str(plan.end_date),
+        "attractions": plan.attractions,
         "plan": dict_plan,
     }

@@ -26,4 +26,11 @@ class PlanMetadata(BaseModel):
 
 
 class Plan(PlanMetadata):
+    attractions: List[str]
     plan: Dict[str, List[Attraction]]
+
+
+class RemoveAttraction(BaseModel):
+    plan_id: str
+    date: str
+    attraction_id: str

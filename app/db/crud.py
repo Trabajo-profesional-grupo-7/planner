@@ -1,9 +1,9 @@
 from config.database import collection_name
 
-from app.helpers.plan import parse_plan
 from app.model.plan import Plan
+from app.schema.schemas import deserialize
 
 
 def insert_plan(plan: Plan):
-    dict_plan = parse_plan(plan)
+    dict_plan = deserialize(plan)
     collection_name.insert_one(dict_plan)
