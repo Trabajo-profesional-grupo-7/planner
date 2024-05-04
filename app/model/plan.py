@@ -30,7 +30,7 @@ class Plan(PlanMetadata):
     plan: Dict[str, List[Attraction]]
 
 
-class RemoveAttraction(BaseModel):
+class AttractionPlan(BaseModel):
     plan_id: str
     date: str
     attraction_id: str

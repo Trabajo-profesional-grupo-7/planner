@@ -2,7 +2,7 @@ from bson import ObjectId
 from config.database import collection_name
 from db import crud
 from fastapi import APIRouter
-from model.plan import Plan, PlanMetadata, RemoveAttraction
+from model.plan import AttractionPlan, Plan, PlanMetadata
 from schema.schemas import list_serial
 from services import plan as srv
 
@@ -40,15 +40,25 @@ async def post_plan(plan_metadata: PlanMetadata):
 @router.delete(
     "/plan/attraction", tags=["Plans"], description="Delete attraction from a plan"
 )
-async def delete_attraction(attraction: RemoveAttraction):
+async def delete_attraction(attraction: AttractionPlan):
     try:
         await srv.delete_attraction(attraction)
     except:
         pass
 
 
+@router.patch(
+    "/plan/attraction", tags=["Plans"], description="Update attraction from a plan"
+)
+async def update_attraction_plan(attraction: AttractionPlan):
+    try:
+        await srv.update_attraction_plan(attraction)
+    except:
+        pass
+
+
 @router.delete("/plan/{id}", tags=["Plans"], description="Delete plan")
-async def get_plans(id: str):
+async def delete_plan(id: str):
     try:
         return list_serial(collection_name.delete_one({"_id": ObjectId(id)}))
     except:
