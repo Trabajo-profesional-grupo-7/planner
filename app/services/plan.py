@@ -77,7 +77,6 @@ def delete_attraction(attr_to_remove: AttractionPlan):
 
     for attraction in day:
         if attraction["attraction_id"] == attr_to_remove.attraction_id:
-            plan["attractions"].remove(attr_to_remove.attraction_id)
             day.remove(attraction)
 
     collection_name.update_one(
