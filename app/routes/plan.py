@@ -28,9 +28,9 @@ async def get_plans(id: str):
 
 
 @router.post("/plan", tags=["Plans"], description="New plan", response_model=Plan)
-async def post_plan(plan_metadata: PlanMetadata):
+def post_plan(plan_metadata: PlanMetadata):
     try:
-        new_plan = await srv.create_plan(plan_metadata)
+        new_plan = srv.create_plan(plan_metadata)
         crud.insert_plan(new_plan)
         return new_plan
     except:
