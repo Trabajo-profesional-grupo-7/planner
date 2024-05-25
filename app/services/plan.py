@@ -5,6 +5,8 @@ from datetime import timedelta
 import requests
 from bson import ObjectId
 from config.database import collection_name
+from db import crud
+from fastapi import HTTPException
 from services import helpers
 
 from app.model.plan import Attraction, AttractionPlan, Plan, PlanMetadata
@@ -28,10 +30,19 @@ def get_google_top_attractions(user_preferences, destination, days):
     return top_attractions
 
 
-def create_plan(plan_metadata: PlanMetadata) -> Plan:
+# Arma un plan agrupando las atracciones por día que esté más cercanas entre sí.
+# Reparte de forma equitativa los tipos de atracciones según las preferencias del usuario.
+def create_plan(plan_metadata: PlanMetadata) -> dict:
+    plan = crud.get_plan_by_name(plan_metadata.user_id, plan_metadata.plan_name)
+    if plan:
+        raise HTTPException(status_code=400, detail=f"Plan alredy exists")
+
     user_preferences = helpers.get_user_preferences(plan_metadata.user_id)
 
     days = (plan_metadata.end_date - plan_metadata.init_date).days
+    if days == 0:
+        pass
+
     attractions = helpers.get_recommended_attractions(
         plan_metadata.user_id, plan_metadata.destination, user_preferences
     )
@@ -39,9 +50,13 @@ def create_plan(plan_metadata: PlanMetadata) -> Plan:
     attractions_per_day = len(attractions) // days
     attractions_per_day = attractions_per_day if attractions_per_day <= 3 else 3
 
+    total_attactions_amount = attractions_per_day * days
+    max_type_amount = total_attactions_amount / len(user_preferences)
+
     user_plan = {}
     date = plan_metadata.init_date
     assigned_attractions = []
+    types = {}
     for i in range(0, len(attractions) - 1):
 
         if date == plan_metadata.end_date:
@@ -51,7 +66,19 @@ def create_plan(plan_metadata: PlanMetadata) -> Plan:
         distances = []
 
         for j in range(0, len(attractions)):
-            if attractions[j]["attraction_id"] in assigned_attractions:
+            type_completed = False
+            for type in attractions[j]["types"]:
+                type_amount = types.get(type)
+                if not type_amount:
+                    continue
+
+                if type_amount >= max_type_amount:
+                    type_completed = True
+
+            if (
+                type_completed
+                or attractions[j]["attraction_id"] in assigned_attractions
+            ):
                 continue
 
             distance = math.sqrt(
@@ -86,12 +113,31 @@ def create_plan(plan_metadata: PlanMetadata) -> Plan:
                     )
                 )
                 distances.append(distance)
+                for type in attractions[j]["types"]:
+                    if types.get(type):
+                        types[type] += 1
+                    else:
+                        types[type] = 1
 
                 if len(daily_attractions_list) > attractions_per_day:
                     to_remove = distances.index(max_distance)
                     distance = distances.pop(to_remove)
-                    attraction = daily_attractions_list.pop(to_remove)
-                    assigned_attractions.remove(attraction.attraction_id)
+                    removed_attraction = daily_attractions_list.pop(to_remove)
+                    assigned_attractions.remove(removed_attraction.attraction_id)
+
+                    for attraction in attractions:
+                        if (
+                            attraction["attraction_id"]
+                            == removed_attraction.attraction_id
+                        ):
+                            break
+
+                    for type in attraction["types"]:
+                        type_amount = types.get(type)
+                        if type_amount == 1:
+                            types.pop(type)
+                        else:
+                            types[type] -= 1
 
         user_plan[str(date)] = daily_attractions_list
         date += timedelta(days=1)

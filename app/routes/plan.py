@@ -1,7 +1,7 @@
 from bson import ObjectId
 from config.database import collection_name
 from db import crud
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Response
 from model.plan import AttractionPlan, Plan, PlanMetadata
 from schema.schemas import list_serial
 from services import plan as srv
@@ -27,14 +27,15 @@ async def get_plans(id: str):
         pass
 
 
-@router.post("/plan", tags=["Plans"], description="New plan", response_model=Plan)
-def post_plan(plan_metadata: PlanMetadata):
+@router.post("/plan", tags=["Plans"], description="New plan", response_model=Plan | str)
+def post_plan(plan_metadata: PlanMetadata, response: Response):
     try:
         new_plan = srv.create_plan(plan_metadata)
         crud.insert_plan(new_plan)
         return new_plan
-    except:
-        pass
+    except HTTPException as e:
+        response.status_code = e.status_code
+        return e.detail
 
 
 @router.delete(
