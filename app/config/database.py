@@ -12,4 +12,4 @@ client = MongoClient(uri)
 
 db = client.planner_db
 
-collection_name = db["planner_collection"]
+plans_collection = db["planner_collection"]

@@ -1,65 +1,102 @@
-import os
+import math
+from datetime import date
+from typing import List
 
-import requests
-
-USER_SERVICE = os.getenv("USER_SERVICE")
-ATTRACTIONS_URL = os.getenv("ATTRACTIONS_URL")
-
-
-def get_user_preferences(user_id: int):
-    user_preferences = requests.get(
-        f"{USER_SERVICE}/users/{user_id}/preferences",
-    )
-    return user_preferences.json()
+from app.model import plan as model
+from app.schema import schemas as dto
 
 
-def get_google_top_attractions(user_preferences, destination) -> list:
-    preferences = ",".join(user_preferences)
-    preferences = preferences.replace(",", " or ")
-
-    attractions = requests.post(
-        f"{ATTRACTIONS_URL}/attractions/search",
-        json={"query": preferences + " in " + destination},
-    )
-
-    return list(attractions.json())
-
-
-def get_recommended_attractions(user_id, destination, user_preferences=[]) -> list:
-    attractions = requests.post(
-        f"{ATTRACTIONS_URL}/create_plan/",
-        json={
-            "user_id": user_id,
-            "city": destination,
-            "preferences": user_preferences,
-        },
-    )
-
-    return list(attractions.json())
-
-
-def get_nearby_attractions(
-    user_preferences,
-    latitude,
-    longitude,
-    radius,
-    attractions_amount,
-    restricted_attractions,
+def calc_plan_metadata(
+    plan_metadata: dto.PlanMetadata,
+    attractions: List[model.Attraction],
+    user_preferences: List[str],
 ):
-    nearby_attractions = requests.post(
-        url=f"{ATTRACTIONS_URL}/attractions/nearby/{latitude}/{longitude}/{radius}",
-        json={"attraction_types": user_preferences},
-    )
-    nearby_attractions = list(nearby_attractions.json())
+    days = (plan_metadata.end_date - plan_metadata.init_date).days
+    if days == 0:
+        pass
 
-    top_nearby_attractions = 0
-    new_attractions = []
-    for attraction in nearby_attractions:
-        if top_nearby_attractions == attractions_amount:
+    attractions_per_day = len(attractions) // days
+    attractions_per_day = attractions_per_day if attractions_per_day <= 3 else 3
+
+    total_attactions_amount = attractions_per_day * days
+    max_type_amount = total_attactions_amount / len(user_preferences)
+
+    return attractions_per_day, max_type_amount
+
+
+def calc_distance(attraction_i: model.Attraction, attraction_j: model.Attraction):
+    return math.sqrt(
+        (attraction_i["location"]["latitude"] - attraction_j["location"]["latitude"])
+        ** 2
+        + (
+            attraction_i["location"]["longitude"]
+            - attraction_j["location"]["longitude"]
+        )
+        ** 2
+    )
+
+
+def check_type_completed(
+    types: dict[str, int], max_type_amount: int, attraction: model.Attraction
+):
+    type_completed = False
+    for type in attraction["types"]:
+        type_amount = types.get(type)
+        if not type_amount:
+            continue
+
+        if type_amount >= max_type_amount:
+            type_completed = True
+
+    return type_completed
+
+
+def add_attraction(
+    assigned_attractions: List[str],
+    daily_attractions_list: List[model.Attraction],
+    attraction: model.Attraction,
+    date: date,
+    distances: List[float],
+    distance: float,
+    types: dict[str, int],
+):
+    assigned_attractions.append(attraction["attraction_id"])
+    daily_attractions_list.append(
+        model.Attraction.model_construct(
+            attraction_id=attraction["attraction_id"],
+            attraction_name=attraction["attraction_name"],
+            location=attraction["location"],
+            date=str(date),
+        )
+    )
+    distances.append(distance)
+    for type in attraction["types"]:
+        if types.get(type):
+            types[type] += 1
+        else:
+            types[type] = 1
+
+
+def remove_attraction(
+    distances: List[float],
+    max_distance: float,
+    daily_attractions_list: List[model.Attraction],
+    assigned_attractions: List[str],
+    attractions: List[model.Attraction],
+    types: dict[str, int],
+):
+    to_remove = distances.index(max_distance)
+    distance = distances.pop(to_remove)
+    removed_attraction = daily_attractions_list.pop(to_remove)
+    assigned_attractions.remove(removed_attraction.attraction_id)
+
+    for attraction in attractions:
+        if attraction["attraction_id"] == removed_attraction.attraction_id:
             break
 
-        if not attraction["attraction_id"] in restricted_attractions:
-            new_attractions.append(attraction)
-            top_nearby_attractions += 1
-
-    return new_attractions
+    for type in attraction["types"]:
+        type_amount = types.get(type)
+        if type_amount == 1:
+            types.pop(type)
+        else:
+            types[type] -= 1

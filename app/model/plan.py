@@ -16,21 +16,18 @@ class Attraction(BaseModel):
     date: str
     hour: Optional[timedelta] = None
 
+    def __getitem__(self, item):
+        return getattr(self, item)
 
-class PlanMetadata(BaseModel):
+
+class Plan(BaseModel):
     user_id: int
     plan_name: str
     destination: str
     init_date: date
     end_date: date
-
-
-class Plan(PlanMetadata):
     attractions: List[str]
     plan: Dict[str, List[Attraction]]
 
-
-class AttractionPlan(BaseModel):
-    plan_id: str
-    date: str
-    attraction_id: str
+    def __getitem__(self, item):
+        return getattr(self, item)

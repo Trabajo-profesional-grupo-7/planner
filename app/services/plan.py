@@ -2,63 +2,41 @@ import math
 import os
 from datetime import timedelta
 
-import requests
-from bson import ObjectId
-from config.database import collection_name
 from db import crud
 from fastapi import HTTPException
-from services import helpers
 
-from app.model.plan import Attraction, AttractionPlan, Plan, PlanMetadata
+from app.model.plan import Plan
+from app.schema import parser
+from app.schema import schemas as dto
+from app.services import api, helpers
 
 ATTRACTIONS_URL = os.getenv("ATTRACTIONS_URL")
 
 
-def get_google_top_attractions(user_preferences, destination, days):
-    preferences = ",".join(user_preferences)
-    preferences = preferences.replace(",", " or ")
-
-    attractions = requests.post(
-        f"{ATTRACTIONS_URL}/attractions/search",
-        json={"query": preferences + " in " + destination},
-    )
-
-    top_attractions = attractions.json()
-    if len(attractions) >= days:
-        top_attractions = attractions[:days]
-
-    return top_attractions
-
-
 # Arma un plan agrupando las atracciones por día que esté más cercanas entre sí.
 # Reparte de forma equitativa los tipos de atracciones según las preferencias del usuario.
-def create_plan(plan_metadata: PlanMetadata) -> dict:
+def create_plan(plan_metadata: dto.PlanMetadata) -> dict:
     plan = crud.get_plan_by_name(plan_metadata.user_id, plan_metadata.plan_name)
     if plan:
         raise HTTPException(status_code=400, detail=f"Plan alredy exists")
 
-    user_preferences = helpers.get_user_preferences(plan_metadata.user_id)
-
-    days = (plan_metadata.end_date - plan_metadata.init_date).days
-    if days == 0:
-        pass
-
-    attractions = helpers.get_recommended_attractions(
+    user_preferences = api.get_user_preferences(plan_metadata.user_id)
+    attractions = api.get_recommended_attractions(
         plan_metadata.user_id, plan_metadata.destination, user_preferences
     )
 
-    attractions_per_day = len(attractions) // days
-    attractions_per_day = attractions_per_day if attractions_per_day <= 3 else 3
-
-    total_attactions_amount = attractions_per_day * days
-    max_type_amount = total_attactions_amount / len(user_preferences)
+    attractions_per_day, max_type_amount = helpers.calc_plan_metadata(
+        plan_metadata,
+        attractions,
+        user_preferences,
+    )
 
     user_plan = {}
     date = plan_metadata.init_date
     assigned_attractions = []
     types = {}
-    for i in range(0, len(attractions) - 1):
 
+    for i in range(0, len(attractions) - 1):
         if date == plan_metadata.end_date:
             break
 
@@ -66,33 +44,13 @@ def create_plan(plan_metadata: PlanMetadata) -> dict:
         distances = []
 
         for j in range(0, len(attractions)):
-            type_completed = False
-            for type in attractions[j]["types"]:
-                type_amount = types.get(type)
-                if not type_amount:
-                    continue
-
-                if type_amount >= max_type_amount:
-                    type_completed = True
-
             if (
-                type_completed
+                helpers.check_type_completed(types, max_type_amount, attractions[j])
                 or attractions[j]["attraction_id"] in assigned_attractions
             ):
                 continue
 
-            distance = math.sqrt(
-                (
-                    attractions[i]["location"]["latitude"]
-                    - attractions[j]["location"]["latitude"]
-                )
-                ** 2
-                + (
-                    attractions[i]["location"]["longitude"]
-                    - attractions[j]["location"]["longitude"]
-                )
-                ** 2
-            )
+            distance = helpers.calc_distance(attractions[i], attractions[j])
 
             if distances:
                 max_distance = max(distances)
@@ -103,46 +61,30 @@ def create_plan(plan_metadata: PlanMetadata) -> dict:
                 distance < max_distance
                 or len(daily_attractions_list) < attractions_per_day
             ):
-                assigned_attractions.append(attractions[j]["attraction_id"])
-                daily_attractions_list.append(
-                    Attraction.model_construct(
-                        attraction_id=attractions[j]["attraction_id"],
-                        attraction_name=attractions[j]["attraction_name"],
-                        location=attractions[j]["location"],
-                        date=str(date),
-                    )
+                helpers.add_attraction(
+                    assigned_attractions,
+                    daily_attractions_list,
+                    attractions[j],
+                    date,
+                    distances,
+                    distance,
+                    types,
                 )
-                distances.append(distance)
-                for type in attractions[j]["types"]:
-                    if types.get(type):
-                        types[type] += 1
-                    else:
-                        types[type] = 1
 
                 if len(daily_attractions_list) > attractions_per_day:
-                    to_remove = distances.index(max_distance)
-                    distance = distances.pop(to_remove)
-                    removed_attraction = daily_attractions_list.pop(to_remove)
-                    assigned_attractions.remove(removed_attraction.attraction_id)
-
-                    for attraction in attractions:
-                        if (
-                            attraction["attraction_id"]
-                            == removed_attraction.attraction_id
-                        ):
-                            break
-
-                    for type in attraction["types"]:
-                        type_amount = types.get(type)
-                        if type_amount == 1:
-                            types.pop(type)
-                        else:
-                            types[type] -= 1
+                    helpers.remove_attraction(
+                        distances,
+                        max_distance,
+                        daily_attractions_list,
+                        assigned_attractions,
+                        attractions,
+                        types,
+                    )
 
         user_plan[str(date)] = daily_attractions_list
         date += timedelta(days=1)
 
-    return Plan(
+    new_plan = Plan(
         user_id=plan_metadata.user_id,
         plan_name=plan_metadata.plan_name,
         destination=plan_metadata.destination,
@@ -151,44 +93,52 @@ def create_plan(plan_metadata: PlanMetadata) -> dict:
         attractions=assigned_attractions,
         plan=user_plan,
     )
+    new_plan = parser.parse_plan(new_plan)
+    plan_id = crud.insert_plan(new_plan)
+    new_plan["id"] = str(plan_id)
+
+    return new_plan
 
 
-def delete_attraction(attr_to_remove: AttractionPlan):
-    plan = collection_name.find_one({"_id": ObjectId(attr_to_remove.plan_id)})
+def delete_attraction(attr_to_remove: dto.AttractionPlan):
+    plan = crud.get_plan_by_id(attr_to_remove.plan_id)
 
-    day = plan["plan"][attr_to_remove.date]
+    daily_attractions = plan["plan"][attr_to_remove.date]
 
-    for attraction in day:
+    for attraction in daily_attractions:
         if attraction["attraction_id"] == attr_to_remove.attraction_id:
-            day.remove(attraction)
+            daily_attractions.remove(attraction)
 
-    collection_name.update_one(
-        {"_id": ObjectId(attr_to_remove.plan_id)}, {"$set": plan}
-    )
+    crud.update_plan(attr_to_remove.plan_id, plan)
 
 
-def update_attraction_plan(attr_to_update: AttractionPlan):
-    plan = collection_name.find_one({"_id": ObjectId(attr_to_update.plan_id)})
+def update_attraction_plan(attr_to_update: dto.AttractionPlan):
+    plan = crud.get_plan_by_id(attr_to_update.plan_id)
 
-    user_preferences = helpers.get_user_preferences(plan["user_id"])
+    user_preferences = api.get_user_preferences(plan["user_id"])
     day = plan["plan"][attr_to_update.date]
 
     for attraction in day:
         if attraction["attraction_id"] == attr_to_update.attraction_id:
-            new_attraction = helpers.get_nearby_attractions(
+            nearby_attractions = api.get_nearby_attractions(
                 user_preferences=user_preferences,
                 latitude=attraction["location"]["latitude"],
                 longitude=attraction["location"]["longitude"],
                 radius=5000,
-                attractions_amount=1,
-                restricted_attractions=plan["attractions"],
-            )[0]
+            )
 
-            plan["attractions"].append(new_attraction["attraction_id"])
-            day.append(new_attraction)
-            break
-
-    collection_name.update_one(
-        {"_id": ObjectId(attr_to_update.plan_id)}, {"$set": plan}
-    )
-    delete_attraction(attr_to_update)
+            for attraction in nearby_attractions:
+                if not attraction["attraction_id"] in plan["attractions"]:
+                    plan["attractions"].append(attraction["attraction_id"])
+                    day.append(
+                        {
+                            "attraction_id": attraction["attraction_id"],
+                            "attraction_name": attraction["attraction_name"],
+                            "location": attraction["location"],
+                            "date": attr_to_update.date,
+                            "hour": None,
+                        }
+                    )
+                    crud.update_plan(attr_to_update.plan_id, plan)
+                    delete_attraction(attr_to_update)
+                    break
