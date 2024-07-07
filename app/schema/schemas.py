@@ -1,49 +1,23 @@
-from app.model.plan import Plan
+from datetime import date
+
+from pydantic import BaseModel
+
+from app.model import plan as model
 
 
-def deserialize(plan: Plan) -> dict:
-    dict_plan = {}
-    for day in plan.plan:
-        attractions = plan.plan.get(day)
-
-        daily_attractions = []
-        for attraction in attractions:
-            daily_attractions.append(
-                {
-                    "attraction_id": attraction.attraction_id,
-                    "attraction_name": attraction.attraction_name,
-                    "location": {
-                        "latitude": attraction.location["latitude"],
-                        "longitude": attraction.location["longitude"],
-                    },
-                    "date": attraction.date,
-                    "hour": None,
-                }
-            )
-
-        dict_plan[day] = daily_attractions
-
-    return {
-        "user_id": plan.user_id,
-        "plan_name": plan.plan_name,
-        "destination": plan.destination,
-        "init_date": str(plan.init_date),
-        "end_date": str(plan.end_date),
-        "attractions": plan.attractions,
-        "plan": dict_plan,
-    }
+class PlanMetadata(BaseModel):
+    user_id: int
+    plan_name: str
+    destination: str
+    init_date: date
+    end_date: date
 
 
-def individual_serial(plan) -> dict:
-    return {
-        "id": str(plan["_id"]),
-        "plan_name": plan["plan_name"],
-        "init_date": plan["init_date"],
-        "end_date": plan["end_date"],
-        "attractions": plan["attractions"],
-        "plan": plan["plan"],
-    }
+class Plan(model.Plan):
+    id: str
 
 
-def list_serial(plans) -> list:
-    return [individual_serial(plan) for plan in plans]
+class AttractionPlan(BaseModel):
+    plan_id: str
+    date: str
+    attraction_id: str
