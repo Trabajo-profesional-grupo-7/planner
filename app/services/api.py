@@ -2,13 +2,13 @@ import os
 
 import requests
 
-USER_SERVICE = os.getenv("USER_SERVICE")
+USER_URL = os.getenv("USER_URL")
 ATTRACTIONS_URL = os.getenv("ATTRACTIONS_URL")
 
 
 def get_user_preferences(user_id: int):
     user_preferences = requests.get(
-        f"{USER_SERVICE}/users/{user_id}/preferences",
+        f"{USER_URL}/users/{user_id}/preferences",
     )
     return user_preferences.json()
 
