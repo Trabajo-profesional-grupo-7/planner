@@ -4,7 +4,6 @@ from bson import ObjectId
 from config.database import plans_collection
 
 from app.model.plan import Plan
-from app.schema import parser
 
 
 def insert_plan(plan: Plan) -> str:
