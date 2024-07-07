@@ -46,8 +46,8 @@ def receive_messages():
                 user_id=plan_dict["user_id"],
                 destination=plan_dict["destination"],
                 plan_name=plan_dict["plan_name"],
-                init_date=datetime.strptime(plan_dict["init_date"], "%d-%m-%Y"),
-                end_date=datetime.strptime(plan_dict["end_date"], "%d-%m-%Y"),
+                init_date=datetime.strptime(plan_dict["init_date"], "%Y-%m-%d"),
+                end_date=datetime.strptime(plan_dict["end_date"], "%Y-%m-%d"),
             )
 
             plan_id = srv.create_plan(plan_metadata)
