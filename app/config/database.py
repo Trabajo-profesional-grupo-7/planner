@@ -1,9 +1,10 @@
 import os
+import urllib.parse
 
 from pymongo.mongo_client import MongoClient
 
-username = os.getenv("DB_USERNAME")
-password = os.getenv("DB_PASSWORD")
+username = urllib.parse.quote_plus(os.getenv("DB_USERNAME"))
+password = urllib.parse.quote_plus(os.getenv("DB_PASSWORD"))
 
 uri = f"mongodb+srv://{username}:{password}@planner.pjzb60a.mongodb.net/?retryWrites=true&w=majority&ssl=true&appName=planner"
 
