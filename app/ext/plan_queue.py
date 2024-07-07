@@ -55,7 +55,11 @@ def receive_messages():
 
             requests.post(
                 f"{NOTIFICATIONS_URL}/notifications/notify",
-                json={"user_id": plan_id["user_id"], "title": "Plan creado!", "body": f"Tu nuevo plan {plan_dict["plan_name"]} ya ha sido creado. Ve a revisar a tu itinerario!"},
+                json={
+                    "user_id": plan_id["user_id"],
+                    "title": "Plan creado!",
+                    "body": f"Tu nuevo plan {plan_dict['plan_name']} ya ha sido creado. Ve a revisar a tu itinerario!",
+                },
             )
 
             # Delete the message after processing
