@@ -1,11 +1,15 @@
 from typing import List
 
 from db import crud
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, Response, status
 from schema import parser
 from services import plan as srv
 
+from app.config import logging
+from app.exceptions.api_exception import APIException
 from app.schema import schemas as dto
+
+logger = logging.get_logger()
 
 router = APIRouter()
 
@@ -17,12 +21,13 @@ router = APIRouter()
     response_model=List[dto.Plan] | str,
     status_code=status.HTTP_200_OK,
 )
-async def get_plans(id: int):
+async def get_plans(id: int, response: Response):
     try:
         db_plans = crud.get_plans_by_user_id(id)
         return parser.parse_plan_list(db_plans)
-    except Exception as e:
-        print(e)
+    except APIException as e:
+        response.status_code = e.error_code
+        return e.detail
 
 
 @router.get(
@@ -35,11 +40,9 @@ async def get_plans(id: int):
 async def get_plans(id: str, response: Response):
     try:
         plan = crud.get_plan_by_id(id)
-        if not plan:
-            raise HTTPException(status_code=400, detail="Plan not found")
         return parser.parse_plan_dto(plan)
-    except HTTPException as e:
-        response.status_code = e.status_code
+    except APIException as e:
+        response.status_code = e.error_code
         return e.detail
 
 
@@ -52,9 +55,12 @@ async def get_plans(id: str, response: Response):
 )
 def post_plan(plan_metadata: dto.PlanMetadata, response: Response):
     try:
-        return srv.create_plan(plan_metadata)
-    except HTTPException as e:
-        response.status_code = e.status_code
+        plan = srv.create_plan(plan_metadata)
+        logger.info(f"New plan created for user {plan_metadata.user_id}.")
+        return plan
+    except APIException as e:
+        logger.error(f"Error creating plan for user {plan_metadata.user_id}.")
+        response.status_code = e.error_code
         return e.detail
 
 
@@ -64,11 +70,18 @@ def post_plan(plan_metadata: dto.PlanMetadata, response: Response):
     description="Delete attraction from a plan",
     status_code=status.HTTP_200_OK,
 )
-async def delete_attraction(attraction: dto.AttractionPlan):
+async def delete_attraction(attraction: dto.AttractionPlan, response: Response):
     try:
         srv.delete_attraction(attraction)
-    except:
-        pass
+        logger.info(
+            f"Attraction {attraction.attraction_id} deleted from plan {attraction.plan_id}."
+        )
+    except APIException as e:
+        logger.error(
+            f"Error deleting attraction {attraction.attraction_id} from plan {attraction.plan_id}."
+        )
+        response.status_code = e.error_code
+        return e.detail
 
 
 @router.patch(
@@ -77,11 +90,18 @@ async def delete_attraction(attraction: dto.AttractionPlan):
     description="Update attraction from a plan",
     status_code=status.HTTP_200_OK,
 )
-async def update_attraction_plan(attraction: dto.AttractionPlan):
+async def update_attraction_plan(attraction: dto.AttractionPlan, response: Response):
     try:
         srv.update_attraction_plan(attraction)
-    except Exception as e:
-        print(e)
+        logger.info(
+            f"Attraction {attraction.attraction_id} updated in plan {attraction.plan_id}."
+        )
+    except APIException as e:
+        logger.error(
+            f"Error updating attraction {attraction.attraction_id} from plan {attraction.plan_id}."
+        )
+        response.status_code = e.error_code
+        return e.detail
 
 
 @router.delete(
@@ -92,10 +112,9 @@ async def update_attraction_plan(attraction: dto.AttractionPlan):
 )
 async def delete_plan(id: str, response: Response):
     try:
-        if crud.delete_plan_by_id(id):
-            return "Plan deleted"
-
-        raise HTTPException(status_code=400, detail="Plan not found")
-    except HTTPException as e:
-        response.status_code = e.status_code
+        crud.delete_plan_by_id(id)
+        logger.info(f"Plan {id} deleted.")
+    except APIException as e:
+        logger.error(f"Error deleting plan {id}.")
+        response.status_code = e.error_code
         return e.detail
