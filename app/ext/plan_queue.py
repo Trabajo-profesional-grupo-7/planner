@@ -57,8 +57,8 @@ def receive_messages():
                 f"{NOTIFICATIONS_URL}/notifications/notify",
                 json={
                     "user_id": plan_dict["user_id"],
-                    "title": "Plan creado!",
-                    "body": f"Tu nuevo plan {plan_dict['plan_name']} ya ha sido creado. Ve a revisar a tu itinerario!",
+                    "title": "Your plan has been created!",
+                    "body": f"Your new plan {plan_dict['plan_name']} has been created. Go check your itinerary!",
                 },
             )
 
