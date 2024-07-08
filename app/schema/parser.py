@@ -28,6 +28,7 @@ def parse_plan(plan: model.Plan):
         "user_id": plan["user_id"],
         "plan_name": plan["plan_name"],
         "destination": plan["destination"],
+        "image": plan["image"],
         "init_date": str(plan["init_date"]),
         "end_date": str(plan["end_date"]),
         "attractions": plan["attractions"],

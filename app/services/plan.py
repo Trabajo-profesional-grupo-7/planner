@@ -80,10 +80,13 @@ def create_plan(plan_metadata: dto.PlanMetadata) -> dict:
         user_plan[str(date)] = daily_attractions_list
         date += timedelta(days=1)
 
+    destination = api.search_attractions(plan_metadata.destination)[0]
+
     new_plan = Plan(
         user_id=plan_metadata.user_id,
         plan_name=plan_metadata.plan_name,
         destination=plan_metadata.destination,
+        image=destination["photo"],
         init_date=plan_metadata.init_date,
         end_date=plan_metadata.end_date,
         attractions=assigned_attractions,

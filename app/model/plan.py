@@ -24,6 +24,7 @@ class Plan(BaseModel):
     user_id: int
     plan_name: str
     destination: str
+    image: Optional[str] = None
     init_date: date
     end_date: date
     attractions: List[str]

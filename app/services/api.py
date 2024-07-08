@@ -49,3 +49,11 @@ def get_nearby_attractions(
         json={"attraction_types": user_preferences},
     )
     return list(nearby_attractions.json())
+
+
+def search_attractions(destination: str):
+    nearby_attractions = requests.post(
+        url=f"{ATTRACTIONS_URL}/attractions/search",
+        json={"query": destination},
+    )
+    return list(nearby_attractions.json())
