@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from routes.plan import router
 
+from app.exceptions.api_exception import APIException
 from app.ext.plan_queue import receive_messages
 
 app = FastAPI(title="Planner")

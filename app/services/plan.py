@@ -16,10 +16,6 @@ ATTRACTIONS_URL = os.getenv("ATTRACTIONS_URL")
 # Arma un plan agrupando las atracciones por día que esté más cercanas entre sí.
 # Reparte de forma equitativa los tipos de atracciones según las preferencias del usuario.
 def create_plan(plan_metadata: dto.PlanMetadata) -> dict:
-    plan = crud.get_plan_by_name(plan_metadata.user_id, plan_metadata.plan_name)
-    if plan:
-        raise HTTPException(status_code=400, detail=f"Plan alredy exists")
-
     user_preferences = api.get_user_preferences(plan_metadata.user_id)
     attractions = api.get_recommended_attractions(
         plan_metadata.user_id, plan_metadata.destination, user_preferences
