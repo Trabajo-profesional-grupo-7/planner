@@ -19,7 +19,11 @@ def calc_plan_metadata(
     attractions_per_day = attractions_per_day if attractions_per_day <= 3 else 3
 
     total_attactions_amount = attractions_per_day * days
-    max_type_amount = total_attactions_amount / len(user_preferences)
+    preferences_amount = len(user_preferences)
+    if preferences_amount == 0:
+        preferences_amount = 1
+
+    max_type_amount = total_attactions_amount / preferences_amount
 
     return attractions_per_day, max_type_amount
 
