@@ -46,7 +46,8 @@ def create_plan(plan_metadata: dto.PlanMetadata) -> dict:
                     (len(attractions) - len(assigned_attractions))
                     > attractions_per_day * (date - plan_metadata.init_date).days
                 )
-            ) or len(daily_attractions_list) >= attractions_per_day:
+                and date != plan_metadata.end_date - timedelta(days=1)
+            ):
                 continue
 
             distance = helpers.calc_distance(attractions[i], attractions[j])
