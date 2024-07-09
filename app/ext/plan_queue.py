@@ -5,14 +5,15 @@ from datetime import datetime
 
 import boto3
 import requests
-import services.plan as srv
 
+import app.services.plan as srv
 from app.config import logging
 from app.schema import schemas as dto
 
 logger = logging.get_logger()
 
 NOTIFICATIONS_URL = os.getenv("NOTIFICATIONS_URL")
+
 
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = urllib.parse.quote_plus(

@@ -1,8 +1,8 @@
 from typing import List
 
 from bson import ObjectId
-from config.database import plans_collection
 
+from app.config.database import plans_collection
 from app.exceptions.exceptions import InvalidAttractionID, PlanNotFound
 from app.model.plan import Plan
 

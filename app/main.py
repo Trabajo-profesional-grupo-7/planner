@@ -3,10 +3,9 @@ from threading import Thread
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from routes.plan import router
 
-from app.exceptions.api_exception import APIException
 from app.ext.plan_queue import receive_messages
+from app.routes.plan import router
 
 app = FastAPI(title="Planner")
 

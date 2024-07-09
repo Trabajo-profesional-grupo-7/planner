@@ -1,10 +1,7 @@
-import math
 import os
 from datetime import timedelta
 
-from db import crud
-from fastapi import HTTPException
-
+from app.db import crud
 from app.model.plan import Plan
 from app.schema import parser
 from app.schema import schemas as dto
@@ -41,9 +38,15 @@ def create_plan(plan_metadata: dto.PlanMetadata) -> dict:
 
         for j in range(0, len(attractions)):
             if (
-                helpers.check_type_completed(types, max_type_amount, attractions[j])
-                or attractions[j]["attraction_id"] in assigned_attractions
-            ):
+                (
+                    helpers.check_type_completed(types, max_type_amount, attractions[j])
+                    or attractions[j]["attraction_id"] in assigned_attractions
+                )
+                and (
+                    (len(attractions) - len(assigned_attractions))
+                    > attractions_per_day * (date - plan_metadata.init_date).days
+                )
+            ) or len(daily_attractions_list) >= attractions_per_day:
                 continue
 
             distance = helpers.calc_distance(attractions[i], attractions[j])

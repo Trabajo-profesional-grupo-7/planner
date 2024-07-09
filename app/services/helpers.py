@@ -40,9 +40,7 @@ def calc_distance(attraction_i: model.Attraction, attraction_j: model.Attraction
     )
 
 
-def check_type_completed(
-    types: dict[str, int], max_type_amount: int, attraction: model.Attraction
-):
+def check_type_completed(types: dict[str, int], max_type_amount: int, attraction):
     type_completed = False
     for type in attraction["types"]:
         type_amount = types.get(type)
@@ -84,9 +82,9 @@ def add_attraction(
 def remove_attraction(
     distances: List[float],
     max_distance: float,
-    daily_attractions_list: List[model.Attraction],
+    daily_attractions_list: List,
     assigned_attractions: List[str],
-    attractions: List[model.Attraction],
+    attractions: List,
     types: dict[str, int],
 ):
     to_remove = distances.index(max_distance)
